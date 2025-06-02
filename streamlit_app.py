@@ -6,7 +6,7 @@ st.set_page_config(page_title="Merch Planning AI", layout="wide")
 st.title("📦 Merchandise Planning AI Agent")
 
 st.markdown("""
-Upload your sales data and get smarter inventory planning.
+Upload your sales data and get inventory and reorder recommendations.
 
 **CSV format required:**
 - `sku`: Product identifier
@@ -27,11 +27,11 @@ if uploaded_file:
         skus = df["sku"].unique()
         selected_sku = st.selectbox("Select SKU", skus)
 
-        if st.button("📊 Analyze & Recommend"):
+        if st.button("🔮 Get Inventory Recommendation"):
             sku_df = df[df["sku"] == selected_sku].copy()
-
             forecast = forecast_demand(sku_df[['date', 'units_sold']])
-            avg_forecast_per_week = forecast["yhat"].mean()
+            avg_forecast_per_day = forecast["yhat"].mean()
+            avg_forecast_per_week = avg_forecast_per_day * 7
 
             current_inventory = sku_df["current_inventory"].iloc[-1]
             weeks_cover_target = sku_df["weeks_cover_target"].iloc[-1]
@@ -39,17 +39,14 @@ if uploaded_file:
             recommended_inventory = round(avg_forecast_per_week * weeks_cover_target)
             reorder_quantity = max(recommended_inventory - current_inventory, 0)
 
-            st.subheader(f"🧠 Recommendations for {selected_sku}")
-            col1, col2, col3 = st.columns(3)
-            col1.metric("📦 Avg Weekly Demand", round(avg_forecast_per_week))
-            col2.metric("🏷️ Current Inventory", current_inventory)
-            col3.metric("📌 Reorder Qty Needed", reorder_quantity)
+            st.subheader(f"📈 Forecast & Recommendation for {selected_sku}")
+            st.write(f"**Average Weekly Demand:** `{round(avg_forecast_per_week)}` units")
+            st.write(f"**Current Inventory:** `{current_inventory}` units")
+            st.write(f"**Weeks Cover Target:** `{weeks_cover_target}` weeks")
+            st.write(f"**Recommended Inventory:** `{recommended_inventory}` units")
+            st.write(f"🔁 **Reorder Quantity Needed:** `{reorder_quantity}` units")
 
-            st.subheader("📈 Forecast Chart (Weekly)")
-            st.line_chart(forecast.set_index("ds")[["yhat", "yhat_lower", "yhat_upper"]])
-
-            csv_download = forecast.to_csv(index=False)
-            st.download_button("⬇️ Download Forecast CSV", csv_download, file_name="forecast.csv")
+            st.line_chart(forecast.set_index("ds")["yhat"])
     else:
         st.error("CSV must include: sku, date, units_sold, current_inventory, weeks_cover_target")
 else:
